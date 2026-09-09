@@ -1,3 +1,5 @@
 node_modules/
-auth_info_baileys/
 .env
+auth_info/
+creds.json
+*.log
