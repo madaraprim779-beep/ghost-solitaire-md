@@ -1,54 +1,67 @@
-const { default: makeWASocket, useMultiFileAuthState, Browsers } = require('@whiskeysockets/baileys');
-const pino = require('pino');
-const express = require('express');
+import makeWASocket, {
+  useMultiFileAuthState,
+  DisconnectReason,
+  fetchLatestBaileysVersion
+} from "@whiskeysockets/baileys";
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+import P from "pino";
+import qrcode from "qrcode-terminal";
+import { config } from "./config.js";
 
-app.get('/', (req, res) => {
-  res.send('Ghost Solitaire MD est en ligne et actif !');
-});
+async function startBot() {
+  console.log("╭──────────────────────────────╮");
+  console.log("│      GHOST SOLITAIRE MD      │");
+  console.log("│        Démarrage...          │");
+  console.log("╰──────────────────────────────╯");
 
-app.listen(PORT, () => {
-  console.log(`Serveur web démarré sur le port ${PORT}`);
-});
+  const { state, saveCreds } = await useMultiFileAuthState("./auth_info");
 
-async function startGhostSolitaire() {
-  const sessionId = process.env.SESSION_ID;
-
-  if (!sessionId) {
-    console.error("Erreur : SESSION_ID manquant dans les variables d'environnement !");
-    return;
-  }
-
-  const { state, saveCreds } = await useMultiFileAuthState('./auth_info_baileys');
+  const { version } = await fetchLatestBaileysVersion();
 
   const sock = makeWASocket({
-    logger: pino({ level: 'silent' }),
+    version,
     auth: state,
-    browser: Browsers.macOS('Desktop')
+    logger: P({ level: "silent" }),
+    printQRInTerminal: false,
+    browser: ["GHOST SOLITAIRE MD", "Chrome", "1.0.0"]
   });
 
-  sock.ev.on('creds.update', saveCreds);
+  sock.ev.on("creds.update", saveCreds);
 
-  sock.ev.on('connection.update', (update) => {
-    const { connection, lastDisconnect } = update;
-    if (connection === 'open') {
-      console.log(`Ghost Solitaire MD connecté avec succès pour le numéro 2250709300922 !`);
-    } else if (connection === 'close') {
-      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== 401;
-      console.log('Connexion perdue, tentative de reconnexion...', shouldReconnect);
+  sock.ev.on("connection.update", ({ connection, lastDisconnect, qr }) => {
+    if (qr) {
+      console.log("\n📱 SCANNE CE QR CODE AVEC WHATSAPP :\n");
+      qrcode.generate(qr, { small: true });
+    }
+
+    if (connection === "open") {
+      console.log("\n✅ GHOST SOLITAIRE MD EST CONNECTÉ !");
+      console.log(`👑 Owner : ${config.ownerNumber}`);
+      console.log(`⚡ Préfixe : ${config.prefix}`);
+    }
+
+    if (connection === "close") {
+      const statusCode =
+        lastDisconnect?.error?.output?.statusCode;
+
+      const shouldReconnect =
+        statusCode !== DisconnectReason.loggedOut;
+
+      console.log("❌ Connexion fermée.");
+
       if (shouldReconnect) {
-        startGhostSolitaire();
+        console.log("🔄 Reconnexion...");
+        startBot();
+      } else {
+        console.log("⚠️ Session déconnectée. Nouvelle authentification nécessaire.");
       }
     }
   });
 
-  sock.ev.on('messages.upsert', async (chatUpdate) => {
-    const mek = chatUpdate.messages[0];
-    if (!mek.message) return;
-    // Ajoutez vos commandes ici
-  });
-}
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    const message = messages[0];
 
-startGhostSolitaire();
+    if (!message?.message) return;
+    if (message.key.fromMe) return;
+
+    const remoteJ
