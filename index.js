@@ -5,9 +5,8 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 
 import P from "pino";
-import qrcode from "qrcode-terminal";
-
 import { config } from "./config.js";
+
 import { generalCommand } from "./commands/general.js";
 import { menuCommand } from "./commands/menu.js";
 import {
@@ -33,19 +32,40 @@ async function startBot() {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // Connexion WhatsApp
+  /*
+   * PAIRING CODE
+   */
+  if (!state.creds.registered && config.botNumber) {
+    try {
+      const phoneNumber = config.botNumber.replace(/\D/g, "");
+
+      console.log("🔐 Génération du Pairing Code...");
+      console.log(`📱 Numéro : ${phoneNumber}`);
+
+      const code = await sock.requestPairingCode(phoneNumber);
+
+      console.log("\n╔════════════════════════════╗");
+      console.log(`║   CODE : ${code}`);
+      console.log("╚════════════════════════════╝\n");
+
+    } catch (error) {
+      console.error(
+        "❌ Impossible de générer le Pairing Code :",
+        error
+      );
+    }
+  }
+
   sock.ev.on(
     "connection.update",
-    ({ connection, lastDisconnect, qr }) => {
-
-      if (qr) {
-        console.log("\n📱 SCANNE LE QR CODE :\n");
-        qrcode.generate(qr, { small: true });
-      }
+    ({ connection, lastDisconnect }) => {
 
       if (connection === "open") {
-        console.log("✅ GHOST SOLITAIRE MD CONNECTÉ !");
-        console.log(`👑 Owner : ${config.ownerNumber}`);
+        console.log("");
+        console.log("╔══════════════════════════════╗");
+        console.log("║ 👻 GHOST SOLITAIRE MD       ║");
+        console.log("║ ✅ WHATSAPP CONNECTÉ         ║");
+        console.log("╚══════════════════════════════╝");
       }
 
       if (connection === "close") {
@@ -62,7 +82,9 @@ async function startBot() {
     }
   );
 
-  // Réception des messages
+  /*
+   * COMMANDES
+   */
   sock.ev.on("messages.upsert", async ({ messages }) => {
     try {
       const message = messages[0];
@@ -87,37 +109,34 @@ async function startBot() {
       const command = parts.shift()?.toLowerCase();
       const args = parts;
 
-      console.log(`📩 .${command}`);
+      console.log(`📩 Commande : .${command}`);
 
-      // Commandes générales
-      const handledGeneral =
-        await generalCommand(sock, jid, command);
-
-      if (handledGeneral) return;
-
-      // Menu
       if (command === "menu" || command === "allmenu") {
         await menuCommand(sock, jid);
         return;
       }
 
-      // Anti-call
       if (command === "antcall") {
         await antiCallCommand(sock, jid, args);
         return;
       }
+
+      const handled =
+        await generalCommand(sock, jid, command);
+
+      if (handled) return;
 
     } catch (error) {
       console.error("❌ Erreur commande :", error);
     }
   });
 
-  // Gestion des appels
+  /*
+   * ANTI-CALL
+   */
   sock.ev.on("call", async (calls) => {
     for (const call of calls) {
-      const jid = call.from;
-
-      if (!getAntiCall(jid)) continue;
+      if (!getAntiCall(call.from)) continue;
 
       try {
         if (call.status === "offer") {
@@ -126,16 +145,12 @@ async function startBot() {
             call.from
           );
 
-          await sock.sendMessage(jid, {
+          await sock.sendMessage(call.from, {
             text:
               "📵 *GHOST SOLITAIRE MD*\n\n" +
               "🛡️ Anti-call activé.\n" +
               "❌ Appel refusé automatiquement."
           });
-
-          console.log(
-            `📵 Appel bloqué : ${jid}`
-          );
         }
       } catch (error) {
         console.error(
@@ -149,7 +164,7 @@ async function startBot() {
 
 startBot().catch((error) => {
   console.error(
-    "❌ Erreur de démarrage :",
+    "❌ Erreur fatale :",
     error
   );
 });
