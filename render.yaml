@@ -1,0 +1,9 @@
+services:
+  - type: worker
+    name: ghost-solitaire-md
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: SESSION_ID
+        sync: false
