@@ -1,8 +1,11 @@
 export const config = {
   botName: "GHOST SOLITAIRE MD",
-  ownerNumber: "2250709300922",
-  prefix: ".",
 
-  // Ne jamais mettre la vraie session directement dans GitHub.
-  sessionId: process.env.SESSION_ID || ""
+  // Numéro WhatsApp du compte qui sera connecté au bot
+  botNumber: process.env.BOT_NUMBER || "",
+
+  // Numéro du propriétaire
+  ownerNumber: "2250709300922",
+
+  prefix: "."
 };
