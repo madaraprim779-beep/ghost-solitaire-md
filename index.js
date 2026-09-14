@@ -35,7 +35,7 @@ async function startBot() {
   sock.ev.on("creds.update", saveCreds);
 
   /*
-   * PAIRING CODE (avec délai de 5 secondes pour stabiliser la connexion)
+   * PAIRING CODE (Sécurisé : attend que le socket soit prêt ou un court délai stable)
    */
   if (!state.creds.registered && config.botNumber) {
     setTimeout(async () => {
@@ -57,7 +57,7 @@ async function startBot() {
           error
         );
       }
-    }, 5000);
+    }, 8000); // Porté à 8 secondes pour laisser largement le temps au socket de s'ouvrir
   }
 
   sock.ev.on(
