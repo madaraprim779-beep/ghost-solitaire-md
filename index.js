@@ -1,8 +1,10 @@
-import makeWASocket, {
-  useMultiFileAuthState,
-  DisconnectReason,
-  fetchLatestBaileysVersion
-} from "@whiskeysockets/baileys";
+import baileys from "@whiskeysockets/baileys";
+const { 
+  default: makeWASocket, 
+  useMultiFileAuthState, 
+  DisconnectReason, 
+  fetchLatestBaileysVersion 
+} = baileys;
 
 import P from "pino";
 import { config } from "./config.js";
