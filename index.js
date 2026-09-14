@@ -35,27 +35,29 @@ async function startBot() {
   sock.ev.on("creds.update", saveCreds);
 
   /*
-   * PAIRING CODE
+   * PAIRING CODE (avec délai de 5 secondes pour stabiliser la connexion)
    */
   if (!state.creds.registered && config.botNumber) {
-    try {
-      const phoneNumber = config.botNumber.replace(/\D/g, "");
+    setTimeout(async () => {
+      try {
+        const phoneNumber = config.botNumber.replace(/\D/g, "");
 
-      console.log("🔐 Génération du Pairing Code...");
-      console.log(`📱 Numéro : ${phoneNumber}`);
+        console.log("🔐 Génération du Pairing Code...");
+        console.log(`📱 Numéro : ${phoneNumber}`);
 
-      const code = await sock.requestPairingCode(phoneNumber);
+        const code = await sock.requestPairingCode(phoneNumber);
 
-      console.log("\n╔════════════════════════════╗");
-      console.log(`║   CODE : ${code}`);
-      console.log("╚════════════════════════════╝\n");
+        console.log("\n╔════════════════════════════╗");
+        console.log(`║   CODE : ${code}`);
+        console.log("╚════════════════════════════╝\n");
 
-    } catch (error) {
-      console.error(
-        "❌ Impossible de générer le Pairing Code :",
-        error
-      );
-    }
+      } catch (error) {
+        console.error(
+          "❌ Impossible de générer le Pairing Code :",
+          error
+        );
+      }
+    }, 5000);
   }
 
   sock.ev.on(
